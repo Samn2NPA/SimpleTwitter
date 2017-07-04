@@ -30,4 +30,11 @@ public class ResourceUtils {
                 .bitmapTransform(new RoundedCornersTransformation(context, 10, 1))
                 .into(imageView);
     }
+
+    public static void loadImage(Context context, ImageView imageView, String url){
+        Glide.with(context)
+                .load(url)
+                .placeholder(R.drawable.placeholder)
+                .into(imageView);
+    }
 }

@@ -23,6 +23,7 @@ import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import butterknife.OnClick;
 import cz.msebera.android.httpclient.Header;
 
 /**
@@ -33,6 +34,8 @@ public class TweetAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
 
     private List<Tweet> tweets;
     private Context context;
+    private TwitterClient client = TwitterApplication.getRestClient();
+    private static long TWEET_ID;
 
     private Listener listener;
     public interface Listener{
@@ -75,6 +78,8 @@ public class TweetAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     @Override
     public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
         Tweet tweet = tweets.get(position);
+        TWEET_ID = tweet.getTweetId();
+
         bindViewHolder((ViewHolder) holder, tweet);
 
         if(position == tweets.size() - 1){
@@ -92,93 +97,11 @@ public class TweetAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         holder.tvRetweetCount.setText(String.valueOf( tweet.getRetweetCount()));
         holder.tvTimestamp.setText(tweet.getTimestamp());
 
-        final TwitterClient client = TwitterApplication.getRestClient();
-        if(tweet.isFavorited()){
-            holder.ivFavorite.setImageResource(R.drawable.ic_favorited);
-            holder.ivFavorite.setTag(R.drawable.ic_favorited);
-        }
-        else{
-            holder.ivFavorite.setImageResource(R.drawable.ic_favorited_none);
-            holder.ivFavorite.setTag(R.drawable.ic_favorited_none);
-        }
+        setUpImageView(holder.ivFavorite, holder.ivRetweet, tweet);
 
-        holder.ivFavorite.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if(holder.ivFavorite.getTag().equals(R.drawable.ic_favorited) ){
-                    client.favoriteDestroy(String.valueOf(tweet.getTweetId()), new JsonHttpResponseHandler(){
-                        @Override
-                        public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-                            holder.ivFavorite.setImageResource(R.drawable.ic_favorited_none);
-                            holder.ivFavorite.setTag(R.drawable.ic_favorited_none);
-                        }
-
-                        @Override
-                        public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-                            Log.d("Samn: failure::", errorResponse.toString());
-                        }
-                    });
-                }
-                else {
-                    client.favoriteCreate(String.valueOf(tweet.getTweetId()), new JsonHttpResponseHandler(){
-                        @Override
-                        public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-                            holder.ivFavorite.setImageResource(R.drawable.ic_favorited);
-                            holder.ivFavorite.setTag(R.drawable.ic_favorited);
-                        }
-
-                        @Override
-                        public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-                            Log.d("Samn: failure::", errorResponse.toString());
-                        }
-                    });
-                }
-            }
-        });
-
-        if(tweet.isRetweeted()){
-            holder.ivRetweet.setImageResource(R.drawable.ic_retweet_click);
-            holder.ivRetweet.setTag(R.drawable.ic_retweet_click);
-        }
-        else{
-            holder.ivRetweet.setImageResource(R.drawable.ic_retweet_none);
-            holder.ivRetweet.setTag(R.drawable.ic_retweet_none);
-        }
-
-        holder.ivRetweet.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if(holder.ivRetweet.getTag().equals(R.drawable.ic_retweet_click) ){
-                    client.UnRetweet(String.valueOf(tweet.getTweetId()), new JsonHttpResponseHandler(){
-                        @Override
-                        public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-                            holder.ivRetweet.setImageResource(R.drawable.ic_retweet_none);
-                            holder.ivRetweet.setTag(R.drawable.ic_retweet_none);
-                        }
-
-                        @Override
-                        public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-                            Log.d("Samn: failure::", errorResponse.toString());
-                        }
-                    });
-                }
-                else {
-                    client.Retweet(String.valueOf(tweet.getTweetId()), new JsonHttpResponseHandler(){
-                        @Override
-                        public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-                            holder.ivRetweet.setImageResource(R.drawable.ic_retweet_click);
-                            holder.ivRetweet.setTag(R.drawable.ic_retweet_click);
-                        }
-
-                        @Override
-                        public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-                            Log.d("Samn: failure::", errorResponse.toString());
-                        }
-                    });
-                }
-            }
-        });
-
+        //@OnClick
+        retweet(holder.ivRetweet);
+        favorited(holder.ivFavorite);
         holder.ivReply.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -187,7 +110,7 @@ public class TweetAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         });
 
         if(tweet.getUrl()!= null)
-            ResourceUtils.loadImageCircle(context, holder.ivImagePost, tweet.getUrl());
+            ResourceUtils.loadImage(context, holder.ivImagePost, tweet.getUrl());
         else
             holder.ivImagePost.setVisibility(View.GONE);
     }
@@ -232,6 +155,91 @@ public class TweetAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 public void onClick(View view) {
                     int itemPos = getAdapterPosition();
                     Tweet tweet = getTweetAtPosition(itemPos);
+                }
+            });
+        }
+    }
+
+    private void setUpImageView(ImageView ivFavorite, ImageView ivRetweet, Tweet tweet) {
+        if(tweet.isFavorited()){
+            ivFavorite.setImageResource(R.drawable.ic_favorited);
+            ivFavorite.setTag(R.drawable.ic_favorited);
+        }
+        else{
+            ivFavorite.setImageResource(R.drawable.ic_favorited_none);
+            ivFavorite.setTag(R.drawable.ic_favorited_none);
+        }
+
+        if(tweet.isRetweeted()){
+            ivRetweet.setImageResource(R.drawable.ic_retweet_click);
+            ivRetweet.setTag(R.drawable.ic_retweet_click);
+        }
+        else{
+            ivRetweet.setImageResource(R.drawable.ic_retweet_none);
+            ivRetweet.setTag(R.drawable.ic_retweet_none);
+        }
+
+    }
+
+    @OnClick(R.id.ivRetweet)
+    public void retweet(final ImageView ivRetweet){
+        if(ivRetweet.getTag().equals(R.drawable.ic_retweet_click) ){
+            client.UnRetweet(String.valueOf(TWEET_ID), new JsonHttpResponseHandler(){
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                ivRetweet.setImageResource(R.drawable.ic_retweet_none);
+                ivRetweet.setTag(R.drawable.ic_retweet_none);
+            }
+
+            @Override
+            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                Log.d("Samn: failure::", errorResponse.toString());
+            }
+        });
+        }
+        else {
+           client.Retweet(String.valueOf(TWEET_ID), new JsonHttpResponseHandler(){
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                ivRetweet.setImageResource(R.drawable.ic_retweet_click);
+                ivRetweet.setTag(R.drawable.ic_retweet_click);
+            }
+
+            @Override
+            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                Log.d("Samn: failure::", errorResponse.toString());
+            }
+        });
+       }
+    }
+
+    @OnClick(R.id.ivFavorite)
+    public void favorited(final ImageView ivFavorite){
+        if(ivFavorite.getTag().equals(R.drawable.ic_favorited) ){
+            client.favoriteDestroy(String.valueOf(TWEET_ID), new JsonHttpResponseHandler(){
+                @Override
+                public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                    ivFavorite.setImageResource(R.drawable.ic_favorited_none);
+                    ivFavorite.setTag(R.drawable.ic_favorited_none);
+                }
+
+                @Override
+                public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                    Log.d("Samn: failure::", errorResponse.toString());
+                }
+            });
+        }
+        else {
+            client.favoriteCreate(String.valueOf(TWEET_ID), new JsonHttpResponseHandler() {
+                @Override
+                public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                    ivFavorite.setImageResource(R.drawable.ic_favorited);
+                    ivFavorite.setTag(R.drawable.ic_favorited);
+                }
+
+                @Override
+                public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                    Log.d("Samn: failure::", errorResponse.toString());
                 }
             });
         }

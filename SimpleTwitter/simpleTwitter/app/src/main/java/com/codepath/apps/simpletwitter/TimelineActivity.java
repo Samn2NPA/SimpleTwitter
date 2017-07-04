@@ -18,11 +18,15 @@ import com.codepath.apps.simpletwitter.adapter.TwitterClient;
 import com.codepath.apps.simpletwitter.fragment.ComposeTweetDialog;
 import com.codepath.apps.simpletwitter.models.Tweet;
 import com.codepath.apps.simpletwitter.models.TweetList;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.loopj.android.http.JsonHttpResponseHandler;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -79,6 +83,7 @@ public class TimelineActivity extends AppCompatActivity implements ComposeTweetD
             @Override
             public void onLoadMore() {
                 Tweet.nextPage();
+                Log.d("Samn : page:: ", Tweet.getPage() + "");
                 pbLoadMore.setVisibility(View.VISIBLE);
                 populateTimeline(new Listener() {
                     @Override
@@ -134,10 +139,12 @@ public class TimelineActivity extends AppCompatActivity implements ComposeTweetD
             @Override
             public void onSuccess(int statusCode, Header[] headers, JSONArray response) {
 
-                Log.d("Samn", Tweet.getPage() +"");
+                Log.d("Samn: page", Tweet.getPage() +"");
 
                 TweetList tweetList = new TweetList();
-                tweetList.setTweets(Tweet.fromJsonArray(response));
+                List<Tweet> tweets = new Gson().fromJson(response.toString(),
+                                            new TypeToken<List<Tweet>>(){}.getType());
+                tweetList.setTweets(tweets);
                 listener.onResult(tweetList);
                 handleComplete();
             }
